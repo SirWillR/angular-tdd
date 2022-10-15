@@ -36,7 +36,7 @@ class CheckLastEventStatusComponent {
 
 describe(CheckLastEventStatusComponent.name, () => {
   let fixture: ComponentFixture<CheckLastEventStatusComponent>;
-  let checkLastEventStatus: CheckLastEventStatusComponent;
+  let sut: CheckLastEventStatusComponent;
   let loadLastEventRepository: LoadLastEventRepositoryMockService;
 
   beforeEach(async () => {
@@ -53,13 +53,13 @@ describe(CheckLastEventStatusComponent.name, () => {
 
   beforeEach(() => {
     fixture = TestBed.createComponent(CheckLastEventStatusComponent);
-    checkLastEventStatus = fixture.componentInstance;
+    sut = fixture.componentInstance;
     loadLastEventRepository = TestBed.inject(LoadLastEventRepositoryService);
   });
 
   it('should get last event data', () => {
     fixture.detectChanges();
-    checkLastEventStatus.perform('any_group_id');
+    sut.perform('any_group_id');
     expect(loadLastEventRepository.groupId).toBe('any_group_id');
     expect(loadLastEventRepository.callsCount).toBe(1);
   });
