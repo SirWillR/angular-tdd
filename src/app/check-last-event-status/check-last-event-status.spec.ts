@@ -36,7 +36,10 @@ class CheckLastEventStatusComponent {
       map(event => {
         if (!event) return { status: 'done' };
         const now = new Date();
-        return event.endDate >= now ? { status: 'active' } : { status: 'inReview' };
+        if (event.endDate >= now) return { status: 'active' };
+        const reviewDurationInMs = event.reviewDurationInHours * 60 * 60 * 1000;
+        const reviewDate = new Date(event.endDate.getTime() + reviewDurationInMs);
+        return reviewDate >= now ? { status: 'inReview' } : { status: 'done' };
       })
     );
   }
@@ -84,8 +87,12 @@ describe(CheckLastEventStatusComponent.name, () => {
     loadLastEventRepository.output = undefined;
 
     sut.perform(groupId).subscribe(eventStatus => {
-      expect(eventStatus.status).toBe('done');
-      done();
+      try {
+        expect(eventStatus.status).toBe('done');
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
@@ -97,8 +104,12 @@ describe(CheckLastEventStatusComponent.name, () => {
     };
 
     sut.perform(groupId).subscribe(eventStatus => {
-      expect(eventStatus.status).toBe('active');
-      done();
+      try {
+        expect(eventStatus.status).toBe('active');
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
@@ -110,8 +121,12 @@ describe(CheckLastEventStatusComponent.name, () => {
     };
 
     sut.perform(groupId).subscribe(eventStatus => {
-      expect(eventStatus.status).toBe('active');
-      done();
+      try {
+        expect(eventStatus.status).toBe('active');
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
@@ -123,8 +138,12 @@ describe(CheckLastEventStatusComponent.name, () => {
     };
 
     sut.perform(groupId).subscribe(eventStatus => {
-      expect(eventStatus.status).toBe('inReview');
-      done();
+      try {
+        expect(eventStatus.status).toBe('inReview');
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
@@ -138,8 +157,31 @@ describe(CheckLastEventStatusComponent.name, () => {
     };
 
     sut.perform(groupId).subscribe(eventStatus => {
-      expect(eventStatus.status).toBe('inReview');
-      done();
+      try {
+        expect(eventStatus.status).toBe('inReview');
+        done();
+      } catch (err) {
+        done(err);
+      }
+    });
+  });
+
+  it('should return satus done when now is after review time', done => {
+    fixture.detectChanges();
+    const reviewDurationInHours = 1;
+    const reviewDurationInMs = reviewDurationInHours * 60 * 60 * 1000;
+    loadLastEventRepository.output = {
+      endDate: new Date(new Date().getTime() - reviewDurationInMs - 1),
+      reviewDurationInHours
+    };
+
+    sut.perform(groupId).subscribe(eventStatus => {
+      try {
+        expect(eventStatus.status).toBe('done');
+        done();
+      } catch (err) {
+        done(err);
+      }
     });
   });
 
