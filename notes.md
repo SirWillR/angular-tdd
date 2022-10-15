@@ -11,6 +11,7 @@
 - Shotgun Surgery
 - Long Parameter List
 - Primitive Obsession
+- Bad Naming
 
 # Design Patterns/Principles/Convetions
 
@@ -26,3 +27,4 @@
 - System Under Test (SUT)
 - Stategy Pattern
 - Factory Pattern
+- Clean Code
