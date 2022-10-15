@@ -11,9 +11,11 @@ class LoadLastEventRepositoryMockService
   implements LoadLastEventRepositoryService
 {
   public groupId?: string;
+  public callsCount?: number = 0;
 
   loadLastEvent(groupId: string): Observable<void> {
     this.groupId = groupId;
+    this.callsCount!++;
     return of();
   }
 }
@@ -59,5 +61,6 @@ describe(CheckLastEventStatusComponent.name, () => {
     fixture.detectChanges();
     checkLastEventStatus.perform('any_group_id');
     expect(loadLastEventRepository.groupId).toBe('any_group_id');
+    expect(loadLastEventRepository.callsCount).toBe(1);
   });
 });
