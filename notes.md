@@ -9,6 +9,7 @@
 - Test Code in Production
 - Duplicate Code
 - Shotgun Surgery
+- Long Parameter List
 
 # Design Patterns/Principles/Convetions
 
