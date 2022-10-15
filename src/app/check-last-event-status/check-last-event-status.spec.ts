@@ -20,6 +20,8 @@ class LoadLastEventRepositorySpyService implements LoadLastEventRepositoryServic
   }
 }
 
+type EventStatus = { status: string };
+
 @Component({
   selector: 'app-check-last-event-status',
   template: '',
@@ -27,12 +29,12 @@ class LoadLastEventRepositorySpyService implements LoadLastEventRepositoryServic
 class CheckLastEventStatusComponent {
   constructor(private loadLastEventRepository: LoadLastEventRepositoryService) {}
 
-  perform({ groupId }: { groupId: string }): Observable<string> {
+  perform({ groupId }: { groupId: string }): Observable<EventStatus> {
     return this.loadLastEventRepository.loadLastEvent({ groupId }).pipe(
       map(event => {
-        if (!event) return 'done';
+        if (!event) return { status: 'done' };
         const now = new Date();
-        return event.endDate > now ? 'active' : 'inReview';
+        return event.endDate > now ? { status: 'active' } : { status: 'inReview' };
       })
     );
   }
@@ -77,8 +79,8 @@ describe(CheckLastEventStatusComponent.name, () => {
   it('should return satus done whe group has no event', done => {
     fixture.detectChanges();
     loadLastEventRepository.output = undefined;
-    sut.perform({ groupId }).subscribe(status => {
-      expect(status).toBe('done');
+    sut.perform({ groupId }).subscribe(eventStatus => {
+      expect(eventStatus.status).toBe('done');
       done();
     });
   });
@@ -88,8 +90,8 @@ describe(CheckLastEventStatusComponent.name, () => {
     loadLastEventRepository.output = {
       endDate: new Date(new Date().getTime() + 1),
     };
-    sut.perform({ groupId }).subscribe(status => {
-      expect(status).toBe('active');
+    sut.perform({ groupId }).subscribe(eventStatus => {
+      expect(eventStatus.status).toBe('active');
       done();
     });
   });
@@ -99,8 +101,8 @@ describe(CheckLastEventStatusComponent.name, () => {
     loadLastEventRepository.output = {
       endDate: new Date(new Date().getTime() - 1),
     };
-    sut.perform({ groupId }).subscribe(status => {
-      expect(status).toBe('inReview');
+    sut.perform({ groupId }).subscribe(eventStatus => {
+      expect(eventStatus.status).toBe('inReview');
       done();
     });
   });
