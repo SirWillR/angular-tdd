@@ -1,9 +1,12 @@
 import { Component, Injectable } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { first, Observable, of } from 'rxjs';
+import MockDate from 'mockdate';
+import { map, Observable, of } from 'rxjs';
 
 abstract class LoadLastEventRepositoryService {
-  abstract loadLastEvent: (groupId: string) => Observable<string>;
+  abstract loadLastEvent: (
+    groupId: string
+  ) => Observable<{ endDate: Date } | undefined>;
 }
 
 @Injectable()
@@ -12,12 +15,12 @@ class LoadLastEventRepositorySpyService
 {
   public groupId?: string;
   public callsCount?: number = 0;
-  public output?: string;
+  public output?: { endDate: Date };
 
-  loadLastEvent(groupId: string): Observable<string> {
+  loadLastEvent(groupId: string): Observable<{ endDate: Date } | undefined> {
     this.groupId = groupId;
     this.callsCount!++;
-    return of('done').pipe(first());
+    return of(this.output);
   }
 }
 
@@ -31,7 +34,9 @@ class CheckLastEventStatusComponent {
   ) {}
 
   perform(groupId: string): Observable<string> {
-    return this.loadLastEventRepository.loadLastEvent(groupId);
+    return this.loadLastEventRepository
+      .loadLastEvent(groupId)
+      .pipe(map(status => (status === undefined ? 'done' : 'active')));
   }
 }
 
@@ -39,6 +44,10 @@ describe(CheckLastEventStatusComponent.name, () => {
   let fixture: ComponentFixture<CheckLastEventStatusComponent>;
   let sut: CheckLastEventStatusComponent;
   let loadLastEventRepository: LoadLastEventRepositorySpyService;
+
+  beforeAll(() => {
+    MockDate.set(new Date());
+  });
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -65,12 +74,27 @@ describe(CheckLastEventStatusComponent.name, () => {
     expect(loadLastEventRepository.callsCount).toBe(1);
   });
 
-  it('should return satus done whe group has no event', (done) => {
+  it('should return satus done whe group has no event', done => {
     fixture.detectChanges();
     loadLastEventRepository.output = undefined;
-    sut.perform('any_group_id').subscribe((status) => {
+    sut.perform('any_group_id').subscribe(status => {
       expect(status).toBe('done');
       done();
     });
+  });
+
+  it('should return satus active when now is before event and time', done => {
+    fixture.detectChanges();
+    loadLastEventRepository.output = {
+      endDate: new Date(new Date().getTime() + 1),
+    };
+    sut.perform('any_group_id').subscribe(status => {
+      expect(status).toBe('active');
+      done();
+    });
+  });
+
+  afterAll(() => {
+    MockDate.reset();
   });
 });
