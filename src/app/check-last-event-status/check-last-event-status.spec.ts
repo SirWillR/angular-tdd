@@ -1,22 +1,23 @@
 import { Component, Injectable } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { first, Observable, of } from 'rxjs';
 
 abstract class LoadLastEventRepositoryService {
-  abstract loadLastEvent: (groupId: string) => Observable<void>;
+  abstract loadLastEvent: (groupId: string) => Observable<string>;
 }
 
 @Injectable()
-class LoadLastEventRepositoryMockService
+class LoadLastEventRepositorySpyService
   implements LoadLastEventRepositoryService
 {
   public groupId?: string;
   public callsCount?: number = 0;
+  public output?: string;
 
-  loadLastEvent(groupId: string): Observable<void> {
+  loadLastEvent(groupId: string): Observable<string> {
     this.groupId = groupId;
     this.callsCount!++;
-    return of();
+    return of('done').pipe(first());
   }
 }
 
@@ -29,7 +30,7 @@ class CheckLastEventStatusComponent {
     private loadLastEventRepository: LoadLastEventRepositoryService
   ) {}
 
-  perform(groupId: string): Observable<void> {
+  perform(groupId: string): Observable<string> {
     return this.loadLastEventRepository.loadLastEvent(groupId);
   }
 }
@@ -37,7 +38,7 @@ class CheckLastEventStatusComponent {
 describe(CheckLastEventStatusComponent.name, () => {
   let fixture: ComponentFixture<CheckLastEventStatusComponent>;
   let sut: CheckLastEventStatusComponent;
-  let loadLastEventRepository: LoadLastEventRepositoryMockService;
+  let loadLastEventRepository: LoadLastEventRepositorySpyService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -45,7 +46,7 @@ describe(CheckLastEventStatusComponent.name, () => {
       providers: [
         {
           provide: LoadLastEventRepositoryService,
-          useClass: LoadLastEventRepositoryMockService,
+          useClass: LoadLastEventRepositorySpyService,
         },
       ],
     }).compileComponents();
@@ -62,5 +63,14 @@ describe(CheckLastEventStatusComponent.name, () => {
     sut.perform('any_group_id');
     expect(loadLastEventRepository.groupId).toBe('any_group_id');
     expect(loadLastEventRepository.callsCount).toBe(1);
+  });
+
+  it('should return satus done whe group has no event', (done) => {
+    fixture.detectChanges();
+    loadLastEventRepository.output = undefined;
+    sut.perform('any_group_id').subscribe((status) => {
+      expect(status).toBe('done');
+      done();
+    });
   });
 });
