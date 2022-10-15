@@ -28,9 +28,13 @@ class CheckLastEventStatusComponent {
   constructor(private loadLastEventRepository: LoadLastEventRepositoryService) {}
 
   perform({ groupId }: { groupId: string }): Observable<string> {
-    return this.loadLastEventRepository
-      .loadLastEvent({ groupId })
-      .pipe(map(status => (status === undefined ? 'done' : 'active')));
+    return this.loadLastEventRepository.loadLastEvent({ groupId }).pipe(
+      map(event => {
+        if (!event) return 'done';
+        const now = new Date();
+        return event.endDate > now ? 'active' : 'inReview';
+      })
+    );
   }
 }
 
@@ -86,6 +90,17 @@ describe(CheckLastEventStatusComponent.name, () => {
     };
     sut.perform({ groupId }).subscribe(status => {
       expect(status).toBe('active');
+      done();
+    });
+  });
+
+  it('should return satus inReview when now is after event and time', done => {
+    fixture.detectChanges();
+    loadLastEventRepository.output = {
+      endDate: new Date(new Date().getTime() - 1),
+    };
+    sut.perform({ groupId }).subscribe(status => {
+      expect(status).toBe('inReview');
       done();
     });
   });
