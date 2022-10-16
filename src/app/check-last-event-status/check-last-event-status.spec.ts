@@ -1,5 +1,6 @@
 import { Component, Injectable } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { createSpyFromClass, Spy } from 'jest-auto-spies';
 import MockDate from 'mockdate';
 import { map, Observable, of } from 'rxjs';
 
@@ -22,33 +23,43 @@ class LoadLastEventRepositorySpyService implements LoadLastEventRepositoryServic
   }
 }
 
-type EventStatus = { status: string };
+class EventStatus {
+  status: 'active' | 'inReview' | 'done';
+
+  constructor(event?: { endDate: Date; reviewDurationInHours: number }) {
+    if (!event) {
+      this.status = 'done';
+      return;
+    }
+
+    const now = new Date();
+    if (event.endDate >= now) {
+      this.status = 'active';
+      return;
+    }
+
+    const reviewDurationInMs = event.reviewDurationInHours * 60 * 60 * 1000;
+    const reviewDate = new Date(event.endDate.getTime() + reviewDurationInMs);
+    this.status = reviewDate >= now ? 'inReview' : 'done';
+  }
+}
 
 @Component({
   selector: 'app-check-last-event-status',
   template: ''
 })
 class CheckLastEventStatusComponent {
-  constructor(private loadLastEventRepository: LoadLastEventRepositoryService) {}
+  constructor(private loadLastEventRepositorySpy: LoadLastEventRepositoryService) {}
 
   perform(groupId: string): Observable<EventStatus> {
-    return this.loadLastEventRepository.loadLastEventById(groupId).pipe(
-      map(event => {
-        if (!event) return { status: 'done' };
-        const now = new Date();
-        if (event.endDate >= now) return { status: 'active' };
-        const reviewDurationInMs = event.reviewDurationInHours * 60 * 60 * 1000;
-        const reviewDate = new Date(event.endDate.getTime() + reviewDurationInMs);
-        return reviewDate >= now ? { status: 'inReview' } : { status: 'done' };
-      })
-    );
+    return this.loadLastEventRepositorySpy.loadLastEventById(groupId).pipe(map(event => new EventStatus(event)));
   }
 }
 
 describe(CheckLastEventStatusComponent.name, () => {
   let fixture: ComponentFixture<CheckLastEventStatusComponent>;
   let sut: CheckLastEventStatusComponent;
-  let loadLastEventRepository: LoadLastEventRepositorySpyService;
+  let loadLastEventRepositorySpy: Spy<LoadLastEventRepositorySpyService>;
 
   const groupId = 'any_group_id';
 
@@ -62,7 +73,7 @@ describe(CheckLastEventStatusComponent.name, () => {
       providers: [
         {
           provide: LoadLastEventRepositoryService,
-          useClass: LoadLastEventRepositorySpyService
+          useClass: createSpyFromClass(LoadLastEventRepositorySpyService)
         }
       ]
     }).compileComponents();
@@ -71,20 +82,20 @@ describe(CheckLastEventStatusComponent.name, () => {
   beforeEach(() => {
     fixture = TestBed.createComponent(CheckLastEventStatusComponent);
     sut = fixture.componentInstance;
-    loadLastEventRepository = TestBed.inject(LoadLastEventRepositoryService);
+    loadLastEventRepositorySpy = TestBed.inject<any>(LoadLastEventRepositoryService);
   });
 
   it('should get last event data', () => {
     fixture.detectChanges();
     sut.perform(groupId);
 
-    expect(loadLastEventRepository.groupId).toBe(groupId);
-    expect(loadLastEventRepository.callsCount).toBe(1);
+    expect(loadLastEventRepositorySpy.groupId).toBe(groupId);
+    expect(loadLastEventRepositorySpy.callsCount).toBe(1);
   });
 
   it('should return satus done whe group has no event', done => {
     fixture.detectChanges();
-    loadLastEventRepository.output = undefined;
+    loadLastEventRepositorySpy.output = undefined;
 
     sut.perform(groupId).subscribe(eventStatus => {
       try {
@@ -98,7 +109,7 @@ describe(CheckLastEventStatusComponent.name, () => {
 
   it('should return satus active when now is before event and time', done => {
     fixture.detectChanges();
-    loadLastEventRepository.output = {
+    loadLastEventRepositorySpy.output = {
       endDate: new Date(new Date().getTime() + 1),
       reviewDurationInHours: 1
     };
@@ -115,7 +126,7 @@ describe(CheckLastEventStatusComponent.name, () => {
 
   it('should return satus active when now is equal to event and time', done => {
     fixture.detectChanges();
-    loadLastEventRepository.output = {
+    loadLastEventRepositorySpy.output = {
       endDate: new Date(),
       reviewDurationInHours: 1
     };
@@ -132,7 +143,7 @@ describe(CheckLastEventStatusComponent.name, () => {
 
   it('should return satus inReview when now is after event and time', done => {
     fixture.detectChanges();
-    loadLastEventRepository.output = {
+    loadLastEventRepositorySpy.output = {
       endDate: new Date(new Date().getTime() - 1),
       reviewDurationInHours: 1
     };
@@ -151,7 +162,7 @@ describe(CheckLastEventStatusComponent.name, () => {
     fixture.detectChanges();
     const reviewDurationInHours = 1;
     const reviewDurationInMs = reviewDurationInHours * 60 * 60 * 1000;
-    loadLastEventRepository.output = {
+    loadLastEventRepositorySpy.output = {
       endDate: new Date(new Date().getTime() - reviewDurationInMs),
       reviewDurationInHours
     };
@@ -170,7 +181,7 @@ describe(CheckLastEventStatusComponent.name, () => {
     fixture.detectChanges();
     const reviewDurationInHours = 1;
     const reviewDurationInMs = reviewDurationInHours * 60 * 60 * 1000;
-    loadLastEventRepository.output = {
+    loadLastEventRepositorySpy.output = {
       endDate: new Date(new Date().getTime() - reviewDurationInMs - 1),
       reviewDurationInHours
     };
